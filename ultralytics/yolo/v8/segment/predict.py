@@ -33,19 +33,19 @@ def count(founded_classes, im0):
     cnt_str = str(k) + ":" + str(v)
     height, width, _ = im0.shape
     #cv2.line(im0, (20,65+ (i*40)), (127,65+ (i*40)), [85,45,255], 30)
-    if str(k) == 'car':
+    if str(k) == 'Aluminium':
         i = 0
         cv2.rectangle(im0, (width - 190, 45 + (i*40)), (width, 95 + (i*40)), [85, 45, 255], -1,  cv2.LINE_AA)
         cv2.putText(im0, cnt_str, (width - 190, 75 + (i*40)), 0, 1, [255, 0, 0], thickness = 2, lineType = cv2.LINE_AA)
-    elif str(k) == 'bus':
+    elif str(k) == 'Plastic':
         i = 1
         cv2.rectangle(im0, (width - 190, 45 + (i*40)), (width, 95 + (i*40)), [85, 45, 255], -1,  cv2.LINE_AA)
         cv2.putText(im0, cnt_str, (width - 190, 75 + (i*40)), 0, 1, [255, 0, 0], thickness = 2, lineType = cv2.LINE_AA)
-    elif str(k) == 'truck':
+    elif str(k) == 'copper':
         i = 2
         cv2.rectangle(im0, (width - 190, 45 + (i*40)), (width, 95 + (i*40)), [85, 45, 255], -1,  cv2.LINE_AA)
         cv2.putText(im0, cnt_str, (width - 190, 75 + (i*40)), 0, 1, [255, 0, 0], thickness = 2, lineType = cv2.LINE_AA)
-    elif str(k) == 'person':
+    elif str(k) == 'others':
         i = 3
         cv2.rectangle(im0, (width - 190, 45 + (i*40)), (width, 95 + (i*40)), [85, 45, 255], -1,  cv2.LINE_AA)
         cv2.putText(im0, cnt_str, (width - 190, 75 + (i*40)), 0, 1, [255, 0, 0], thickness = 2, lineType = cv2.LINE_AA)
@@ -89,13 +89,13 @@ def compute_color_for_labels(label):
     """
     Simple function that adds fixed color depending on the class
     """
-    if label == 0: #person
+    if label == 0: #Aluminium
         color = (85,45,255)
-    elif label == 2: # Car
+    elif label == 1: # Plastic
         color = (222,82,175)
-    elif label == 3:  # Motobike
+    elif label == 2:  # copper
         color = (0, 204, 255)
-    elif label == 1:  # A
+    elif label == 3:  # others
         color = (0, 149, 255)
     else:
         color = [int((p * (label ** 2 - label + 1)) % 255) for p in palette]
