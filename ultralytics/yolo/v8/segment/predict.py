@@ -101,36 +101,6 @@ def compute_color_for_labels(label):
         color = [int((p * (label ** 2 - label + 1)) % 255) for p in palette]
     return tuple(color)
 
-def draw_border(img, pt1, pt2, color, thickness, r, d):
-    x1,y1 = pt1
-    x2,y2 = pt2
-    # Top left
-    cv2.line(img, (x1 + r, y1), (x1 + r + d, y1), color, thickness)
-    cv2.line(img, (x1, y1 + r), (x1, y1 + r + d), color, thickness)
-    cv2.ellipse(img, (x1 + r, y1 + r), (r, r), 180, 0, 90, color, thickness)
-    # Top right
-    cv2.line(img, (x2 - r, y1), (x2 - r - d, y1), color, thickness)
-    cv2.line(img, (x2, y1 + r), (x2, y1 + r + d), color, thickness)
-    cv2.ellipse(img, (x2 - r, y1 + r), (r, r), 270, 0, 90, color, thickness)
-    # Bottom left
-    cv2.line(img, (x1 + r, y2), (x1 + r + d, y2), color, thickness)
-    cv2.line(img, (x1, y2 - r), (x1, y2 - r - d), color, thickness)
-    cv2.ellipse(img, (x1 + r, y2 - r), (r, r), 90, 0, 90, color, thickness)
-    # Bottom right
-    cv2.line(img, (x2 - r, y2), (x2 - r - d, y2), color, thickness)
-    cv2.line(img, (x2, y2 - r), (x2, y2 - r - d), color, thickness)
-    cv2.ellipse(img, (x2 - r, y2 - r), (r, r), 0, 0, 90, color, thickness)
-
-    cv2.rectangle(img, (x1 + r, y1), (x2 - r, y2), color, -1, cv2.LINE_AA)
-    cv2.rectangle(img, (x1, y1 + r), (x2, y2 - r - d), color, -1, cv2.LINE_AA)
-    
-    cv2.circle(img, (x1 +r, y1+r), 2, color, 12)
-    cv2.circle(img, (x2 -r, y1+r), 2, color, 12)
-    cv2.circle(img, (x1 +r, y2-r), 2, color, 12)
-    cv2.circle(img, (x2 -r, y2-r), 2, color, 12)
-    
-    return img
-
 
 def UI_box(x, img, color=None, label=None, line_thickness=None):
     # Plots one bounding box on image img
@@ -193,7 +163,14 @@ def draw_boxes(img, bbox, names,object_id, identities=None, offset=(0, 0)):
 
 
 class SegmentationPredictor(DetectionPredictor):
+    def get_annotator(self, img):
+        return Annotator(img, line_width=self.args.line_thickness, example=str(self.model.names))
 
+    def preprocess(self, img):
+        img = torch.from_numpy(img).to(self.model.device)
+        img = img.half() if self.model.fp16 else img.float()  # uint8 to fp16/32
+        img /= 255  # 0 - 255 to 0.0 - 1.0
+        return img
     def postprocess(self, preds, img, orig_img):
         masks = []
         # TODO: filter by classes
@@ -234,7 +211,7 @@ class SegmentationPredictor(DetectionPredictor):
         self.txt_path = str(self.save_dir / 'labels' / p.stem) + ('' if self.dataset.mode == 'image' else f'_{frame}')
         log_string += '%gx%g ' % im.shape[2:]  # print string
         self.annotator = self.get_annotator(im0)
-
+        names = self.model.module.names if hasattr(self.model, 'module') else self.model.names
         preds, masks = preds
         det = preds[idx]
         all_outputs.append(det)
