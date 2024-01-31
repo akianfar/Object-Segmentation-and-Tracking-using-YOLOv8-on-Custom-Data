@@ -219,6 +219,7 @@ class SegmentationPredictor(DetectionPredictor):
 
     def write_results(self, idx, preds, batch):
         p, im, im0 = batch
+        all_outputs = []
         log_string = ""
         if len(im.shape) == 3:
             im = im[None]  # expand for batch dim
