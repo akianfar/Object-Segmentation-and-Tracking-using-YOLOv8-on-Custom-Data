@@ -1,19 +1,24 @@
 # Ultralytics YOLO 🚀, GPL-3.0 license
-
 import hydra
 import torch
-
+import argparse
+import time
+from pathlib import Path
+import cv2
+import torch.backends.cudnn as cudnn
+from ultralytics.yolo.engine.predictor import BasePredictor
+from ultralytics.yolo.utils import DEFAULT_CONFIG, ROOT, ops
+from ultralytics.yolo.utils.plotting import Annotator, colors, save_one_box
+from collections import deque
+import numpy as np
 from ultralytics.yolo.utils import DEFAULT_CONFIG, ROOT, ops
 from ultralytics.yolo.utils.checks import check_imgsz
 from ultralytics.yolo.utils.plotting import colors, save_one_box
-
 from ultralytics.yolo.v8.detect.predict import DetectionPredictor
 from numpy import random
-
-
-import cv2
 from deep_sort_pytorch.utils.parser import get_config
 from deep_sort_pytorch.deep_sort import DeepSort
+
 #Deque is basically a double ended queue in python, we prefer deque over list when we need to perform insertion or pop up operations
 #at the same time
 from collections import deque
@@ -22,6 +27,28 @@ palette = (2 ** 11 - 1, 2 ** 15 - 1, 2 ** 20 - 1)
 data_deque = {}
 
 deepsort = None
+def count(founded_classes, im0):
+
+  for i, (k,v) in enumerate(founded_classes.items()):
+    cnt_str = str(k) + ":" + str(v)
+    height, width, _ = im0.shape
+    #cv2.line(im0, (20,65+ (i*40)), (127,65+ (i*40)), [85,45,255], 30)
+    if str(k) == 'car':
+        i = 0
+        cv2.rectangle(im0, (width - 190, 45 + (i*40)), (width, 95 + (i*40)), [85, 45, 255], -1,  cv2.LINE_AA)
+        cv2.putText(im0, cnt_str, (width - 190, 75 + (i*40)), 0, 1, [255, 0, 0], thickness = 2, lineType = cv2.LINE_AA)
+    elif str(k) == 'bus':
+        i = 1
+        cv2.rectangle(im0, (width - 190, 45 + (i*40)), (width, 95 + (i*40)), [85, 45, 255], -1,  cv2.LINE_AA)
+        cv2.putText(im0, cnt_str, (width - 190, 75 + (i*40)), 0, 1, [255, 0, 0], thickness = 2, lineType = cv2.LINE_AA)
+    elif str(k) == 'truck':
+        i = 2
+        cv2.rectangle(im0, (width - 190, 45 + (i*40)), (width, 95 + (i*40)), [85, 45, 255], -1,  cv2.LINE_AA)
+        cv2.putText(im0, cnt_str, (width - 190, 75 + (i*40)), 0, 1, [255, 0, 0], thickness = 2, lineType = cv2.LINE_AA)
+    elif str(k) == 'person':
+        i = 3
+        cv2.rectangle(im0, (width - 190, 45 + (i*40)), (width, 95 + (i*40)), [85, 45, 255], -1,  cv2.LINE_AA)
+        cv2.putText(im0, cnt_str, (width - 190, 75 + (i*40)), 0, 1, [255, 0, 0], thickness = 2, lineType = cv2.LINE_AA)
 
 def init_tracker():
     global deepsort
@@ -209,8 +236,19 @@ class SegmentationPredictor(DetectionPredictor):
 
         preds, masks = preds
         det = preds[idx]
+        all_outputs.append(det)
         if len(det) == 0:
             return log_string
+        for c in det[:, 5].unique():
+            n = (det[:, 5] == c).sum()  # detections per class
+            class_index=int(c)
+            count_of_object=int(n)
+            founded_classes = {}
+            founded_classes[names[class_index]]=int(n)
+            #s += f"{n} {names[int(c)]}{'s' * (n > 1)}, "  # add to string
+            count(founded_classes=founded_classes,im0=im0)
+
+            log_string += f"{n} {self.model.names[int(c)]}{'s' * (n > 1)}, "        
         # Segments
         mask = masks[idx]
         if self.args.save_txt:
@@ -218,10 +256,10 @@ class SegmentationPredictor(DetectionPredictor):
                 ops.scale_segments(im0.shape if self.args.retina_masks else im.shape[2:], x, im0.shape, normalize=True)
                 for x in reversed(ops.masks2segments(mask))]
 
-        # Print results
-        for c in det[:, 5].unique():
-            n = (det[:, 5] == c).sum()  # detections per class
-            log_string += f"{n} {self.model.names[int(c)]}{'s' * (n > 1)}, "  # add to string
+        # # Print results
+        # for c in det[:, 5].unique():
+        #     n = (det[:, 5] == c).sum()  # detections per class
+        #     log_string += f"{n} {self.model.names[int(c)]}{'s' * (n > 1)}, "  # add to string
 
         # Mask plotting
         self.annotator.masks(
